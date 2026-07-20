@@ -30,10 +30,13 @@ export function parseOpeningBalance(value) {
 
 /** @param {Record<string, any>} row */
 export function accountFromRow(row) {
+  const balanceMinor = row.balance_minor ?? row.opening_balance_minor;
   return {
     id: row.id,
     name: row.name,
     openingBalanceMinor: row.opening_balance_minor,
+    balanceMinor,
+    balance: `${balanceMinor < 0 ? '-' : ''}${Math.floor(Math.abs(balanceMinor) / 100)}.${String(Math.abs(balanceMinor) % 100).padStart(2, '0')}`,
     createdAt: row.created_at
   };
 }

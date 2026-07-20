@@ -65,14 +65,10 @@ export function DELETE({ params }) {
   const db = openDatabase();
   try {
     if (!findCategory(db, id)) return json({ error: 'category not found' }, { status: 404 });
-    try {
-      db.prepare('DELETE FROM categories WHERE id = ?').run(id);
-    } catch (/** @type {any} */ error) {
-      if (error?.code === 'SQLITE_CONSTRAINT_FOREIGNKEY') {
-        return json({ error: 'category is referenced by a transaction' }, { status: 409 });
-      }
-      throw error;
+    if (db.prepare('SELECT 1 FROM transactions WHERE category_id = ? LIMIT 1').get(id)) {
+      return json({ error: 'category is referenced by transactions' }, { status: 409 });
     }
+    db.prepare('DELETE FROM categories WHERE id = ?').run(id);
     return new Response(null, { status: 204 });
   } finally {
     db.close();

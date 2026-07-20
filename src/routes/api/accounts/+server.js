@@ -11,7 +11,14 @@ function validationError(message) {
 export function GET() {
   const db = openDatabase();
   try {
-    const rows = db.prepare('SELECT id, name, opening_balance_minor, created_at FROM accounts ORDER BY id').all();
+    const rows = db.prepare(`
+      SELECT a.id, a.name, a.opening_balance_minor, a.created_at,
+        a.opening_balance_minor + COALESCE(SUM(CASE WHEN t.direction = 'income' THEN t.amount_minor ELSE -t.amount_minor END), 0) AS balance_minor
+      FROM accounts a
+      LEFT JOIN transactions t ON t.account_id = a.id
+      GROUP BY a.id
+      ORDER BY a.id
+    `).all();
     return json(rows.map(accountFromRow));
   } finally {
     db.close();
