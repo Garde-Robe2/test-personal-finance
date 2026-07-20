@@ -298,8 +298,8 @@
         <div class="list">
           {#each accounts as account (account.id)}
             <article class="row">
-              <div><h3>{account.name}</h3><p>Opening balance</p></div>
-              <strong>{money(account.openingBalanceMinor)}</strong>
+              <div><h3>{account.name}</h3><p>Current balance · opening {money(account.openingBalanceMinor)}</p></div>
+              <strong aria-label={`Current balance ${money(account.balanceMinor)}`}>{money(account.balanceMinor)}</strong>
               <div class="actions">
                 <button class="link" type="button" on:click={() => editAccount(account)}>Edit</button>
                 <button class="danger" type="button" on:click={() => removeAccount(account)}>Delete</button>

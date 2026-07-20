@@ -8,6 +8,7 @@ const MUTATING = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 /**
  * Reject non-loopback Host headers so a misbound/public adapter cannot expose the ledger.
  */
+/** @param {string | null} hostHeader */
 function isLoopbackHost(hostHeader) {
 	const host = String(hostHeader || '')
 		.trim()
