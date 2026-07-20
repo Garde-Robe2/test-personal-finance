@@ -18,7 +18,12 @@ export function GET({ params }) {
   if (id === null) return json({ error: 'invalid account id' }, { status: 400 });
   const db = openDatabase();
   try {
-    const row = db.prepare('SELECT id, name, opening_balance_minor, created_at FROM accounts WHERE id = ?').get(id);
+    const row = db.prepare(`
+      SELECT a.id, a.name, a.opening_balance_minor, a.created_at,
+        a.opening_balance_minor + COALESCE(SUM(CASE WHEN t.direction = 'income' THEN t.amount_minor ELSE -t.amount_minor END), 0) AS balance_minor
+      FROM accounts a LEFT JOIN transactions t ON t.account_id = a.id
+      WHERE a.id = ? GROUP BY a.id
+    `).get(id);
     return row ? json(accountFromRow(row)) : json({ error: 'account not found' }, { status: 404 });
   } finally { db.close(); }
 }
@@ -37,7 +42,12 @@ async function updateAccount(params, request) {
   try {
     const result = db.prepare('UPDATE accounts SET name = ?, opening_balance_minor = ? WHERE id = ?').run(body.name.trim(), balance.minor ?? 0, id);
     if (!result.changes) return json({ error: 'account not found' }, { status: 404 });
-    const row = db.prepare('SELECT id, name, opening_balance_minor, created_at FROM accounts WHERE id = ?').get(id);
+    const row = db.prepare(`
+      SELECT a.id, a.name, a.opening_balance_minor, a.created_at,
+        a.opening_balance_minor + COALESCE(SUM(CASE WHEN t.direction = 'income' THEN t.amount_minor ELSE -t.amount_minor END), 0) AS balance_minor
+      FROM accounts a LEFT JOIN transactions t ON t.account_id = a.id
+      WHERE a.id = ? GROUP BY a.id
+    `).get(id);
     return json(accountFromRow(row));
   } finally { db.close(); }
 }
