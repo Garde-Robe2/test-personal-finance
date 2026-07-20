@@ -1,24 +1,30 @@
-<svelte:head>
-  <title>Personal Finance</title>
-  <meta name="description" content="Local-first personal finance ledger" />
-</svelte:head>
-
+<script>
+  import { onMount } from 'svelte';
+  let accounts = [], name = '', openingBalance = '0.00', editingId = null, error = '', notice = '', loading = true, saving = false;
+  const money = (minor) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(minor || 0) / 100);
+  async function message(response, fallback) { try { return (await response.json()).error || fallback; } catch { return fallback; } }
+  async function load() { loading = true; try { const response = await fetch('/api/accounts'); if (!response.ok) throw Error(await message(response, 'Unable to load accounts.')); accounts = await response.json(); error = ''; } catch (e) { error = e.message; } finally { loading = false; } }
+  function reset() { editingId = null; name = ''; openingBalance = '0.00'; }
+  function edit(account) { editingId = account.id; name = account.name; openingBalance = (Number(account.openingBalanceMinor) / 100).toFixed(2); error = ''; notice = ''; }
+  async function save() { saving = true; error = ''; notice = ''; try { const response = await fetch(editingId === null ? '/api/accounts' : `/api/accounts/${editingId}`, { method: editingId === null ? 'POST' : 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name, openingBalance }) }); if (!response.ok) throw Error(await message(response, 'Unable to save account.')); notice = editingId === null ? 'Account created.' : 'Account updated.'; reset(); await load(); } catch (e) { error = e.message; } finally { saving = false; } }
+  async function remove(account) { if (!window.confirm(`Delete “${account.name}”?`)) return; error = ''; notice = ''; try { const response = await fetch(`/api/accounts/${account.id}`, { method: 'DELETE' }); if (!response.ok) throw Error(await message(response, 'Unable to delete account.')); notice = 'Account deleted.'; await load(); } catch (e) { error = e.message; } }
+  onMount(load);
+</script>
+<svelte:head><title>Accounts · Personal Finance</title><meta name="description" content="Manage your local personal finance accounts" /></svelte:head>
 <main>
-  <p class="eyebrow">Local finance</p>
-  <h1>Personal Finance</h1>
-  <p class="intro">A private, local-first ledger foundation. Your data stays in the SQLite file configured for this development environment.</p>
-  <div class="status" role="status">
-    <span class="dot" aria-hidden="true"></span>
-    SQLite runtime ready
-  </div>
+  <header class="hero"><div><p class="eyebrow">Local finance</p><h1>Your accounts</h1><p class="intro">Keep your everyday money in one clear place. Changes are saved locally to your ledger.</p></div><div class="status" role="status"><span class="dot"></span>SQLite runtime ready</div></header>
+  <section class="workspace" aria-label="Account maintenance">
+    <form class="card form-card" on:submit|preventDefault={save}><div class="heading"><div><p class="eyebrow">{editingId === null ? 'New account' : 'Edit account'}</p><h2>{editingId === null ? 'Add an account' : 'Update account'}</h2></div>{#if editingId !== null}<button class="link" type="button" on:click={reset}>Cancel</button>{/if}</div>
+      <label for="account-name">Account name</label><input id="account-name" bind:value={name} placeholder="e.g. Main checking" autocomplete="off" required maxlength="200" />
+      <label for="opening-balance">Opening balance <span>(optional)</span></label><div class="money"><span>$</span><input id="opening-balance" bind:value={openingBalance} inputmode="decimal" placeholder="0.00" /></div>
+      <button class="primary" type="submit" disabled={saving}>{saving ? 'Saving…' : editingId === null ? 'Create account' : 'Save changes'}</button>
+    </form>
+    <section class="card" aria-labelledby="accounts-heading"><div class="heading"><div><p class="eyebrow">Overview</p><h2 id="accounts-heading">Saved accounts</h2></div><span class="count">{accounts.length}</span></div>
+      {#if loading}<p class="empty">Loading accounts…</p>{:else if accounts.length === 0}<p class="empty">No accounts yet. Add your first account to get started.</p>{:else}<div class="list">{#each accounts as account (account.id)}<article class="account"><div><h3>{account.name}</h3><p>Opening balance</p></div><strong>{money(account.openingBalanceMinor)}</strong><div class="actions"><button class="link" type="button" on:click={() => edit(account)}>Edit</button><button class="danger" type="button" on:click={() => remove(account)}>Delete</button></div></article>{/each}</div>{/if}
+    </section>
+  </section>
+  {#if error}<p class="feedback error" role="alert">{error}</p>{/if}{#if notice}<p class="feedback success" role="status">{notice}</p>{/if}
 </main>
-
 <style>
-  :global(body) { margin: 0; background: #f5f2eb; color: #20231f; font-family: system-ui, sans-serif; }
-  main { max-width: 42rem; margin: 15vh auto; padding: 2rem; }
-  .eyebrow { color: #5e7253; font-size: .8rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
-  h1 { font-family: Georgia, serif; font-size: clamp(3rem, 10vw, 6rem); font-weight: 400; line-height: .95; margin: 1rem 0 1.5rem; }
-  .intro { color: #59605a; font-size: 1.15rem; line-height: 1.6; max-width: 34rem; }
-  .status { align-items: center; display: flex; gap: .6rem; margin-top: 2.5rem; font-size: .9rem; font-weight: 600; }
-  .dot { background: #5e8b55; border-radius: 50%; height: .65rem; width: .65rem; }
+  :global(body){margin:0;background:#f5f2eb;color:#20231f;font-family:system-ui,sans-serif}:global(button),:global(input){font:inherit}main{max-width:70rem;margin:auto;padding:4rem 2rem 6rem}.hero{align-items:end;display:flex;justify-content:space-between;gap:2rem;margin-bottom:3.5rem}.eyebrow{color:#5e7253;font-size:.72rem;font-weight:800;letter-spacing:.14em;margin:0 0 .75rem;text-transform:uppercase}h1,h2,h3,p{margin-top:0}h1{font-family:Georgia,serif;font-size:clamp(3.2rem,8vw,6rem);font-weight:400;line-height:.9;margin-bottom:1.25rem}h2{font-family:Georgia,serif;font-size:1.65rem;font-weight:400;margin-bottom:0}h3{font-size:1rem;margin-bottom:.25rem}.intro{color:#626861;font-size:1.05rem;line-height:1.55;max-width:32rem;margin-bottom:0}.status{align-items:center;color:#59605a;display:flex;font-size:.82rem;font-weight:650;gap:.55rem;white-space:nowrap}.dot{background:#5e8b55;border-radius:50%;height:.55rem;width:.55rem}.workspace{align-items:start;display:grid;gap:1.5rem;grid-template-columns:minmax(16rem,.8fr) minmax(20rem,1.2fr)}.card{background:#fffdf9;border:1px solid #e5e1d8;border-radius:1rem;box-shadow:0 1rem 3rem #3a34220b;padding:1.75rem}.heading{align-items:start;display:flex;justify-content:space-between;margin-bottom:1.75rem}label{display:block;font-size:.8rem;font-weight:700;margin:1.15rem 0 .45rem}label span{color:#8b9089;font-weight:400}input{background:#faf8f3;border:1px solid #d9d6cc;border-radius:.5rem;box-sizing:border-box;color:#20231f;padding:.8rem .85rem;width:100%}input:focus{border-color:#5e7253;outline:3px solid #5e725333}.money{align-items:center;background:#faf8f3;border:1px solid #d9d6cc;border-radius:.5rem;display:flex;padding-left:.85rem}.money input{border:0;padding-left:.45rem}.money:focus-within{border-color:#5e7253;outline:3px solid #5e725333}.primary{background:#314d35;border:0;border-radius:.5rem;color:white;cursor:pointer;font-weight:700;margin-top:1.5rem;padding:.85rem 1rem;width:100%}.primary:disabled{opacity:.65}.link,.danger{background:none;border:0;cursor:pointer;font-size:.82rem;font-weight:700;padding:.25rem}.link{color:#486b4b}.danger{color:#a34d42}.count{align-items:center;background:#e9eee5;border-radius:2rem;color:#486b4b;display:flex;font-size:.78rem;font-weight:800;height:1.8rem;justify-content:center;min-width:1.8rem}.list{border-top:1px solid #e5e1d8}.account{align-items:center;border-bottom:1px solid #e5e1d8;display:grid;gap:1rem;grid-template-columns:1fr auto auto;padding:1.1rem 0}.account:last-child{border-bottom:0}.account p{color:#8b9089;font-size:.76rem;margin-bottom:0}.account strong{font-family:Georgia,serif;font-size:1.1rem;font-weight:400}.actions{display:flex;gap:.35rem}.empty{color:#737a72;font-size:.92rem;line-height:1.5;padding:1rem 0 .5rem}.feedback{border-radius:.5rem;font-size:.9rem;margin:1.5rem 0 0;padding:.85rem 1rem}.error{background:#fbeae7;color:#963f35}.success{background:#e7f1e5;color:#3d6843}@media(max-width:680px){main{padding:2.5rem 1rem 4rem}.hero{align-items:start;flex-direction:column;margin-bottom:2.5rem}.workspace{grid-template-columns:1fr}.account{grid-template-columns:1fr auto}.actions{grid-column:1/-1}}
 </style>
