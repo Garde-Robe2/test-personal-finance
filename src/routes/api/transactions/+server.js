@@ -27,6 +27,7 @@ function readPayload(body) {
   const dateError = validateTransactionDate(date);
   if (dateError) return { error: dateError };
   if (body?.memo !== undefined && body.memo !== null && typeof body.memo !== 'string') return { error: 'memo must be a string or null' };
+  if (typeof body?.memo === 'string' && body.memo.length > 500) return { error: 'memo must be at most 500 characters' };
   return { value: { accountId: account.value, categoryId: category.value, amountMinor: amount.value, direction: body.direction, date, memo: body.memo ?? null } };
 }
 function getRow(db, id) { return db.prepare(`${SELECT} WHERE t.id = ?`).get(id); }

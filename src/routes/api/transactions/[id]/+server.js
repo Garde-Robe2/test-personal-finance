@@ -29,6 +29,7 @@ async function update({ params, request }) {
   if (body?.direction !== 'income' && body?.direction !== 'expense') return error('direction must be income or expense');
   if (dateError) return error(dateError);
   if (body?.memo !== undefined && body.memo !== null && typeof body.memo !== 'string') return error('memo must be a string or null');
+  if (typeof body?.memo === 'string' && body.memo.length > 500) return error('memo must be at most 500 characters');
   const db = openDatabase();
   try {
     if (!db.prepare('SELECT 1 FROM transactions WHERE id = ?').get(id.value)) return error('transaction not found', 404);

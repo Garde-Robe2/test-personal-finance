@@ -1,6 +1,6 @@
 # Personal Finance
 
-A local-first SvelteKit application backed by SQLite. The v1 runtime is single-user and localhost-only; no authentication or external services are required.
+A local-first SvelteKit application backed by SQLite. The v1 runtime is single-user and localhost-only; no authentication or external services are required. The app rejects non-loopback `Host` headers and cross-site API mutations, and the Vite/dev server binds to `127.0.0.1` only. Do not deploy a public adapter or expose this process beyond loopback.
 
 ## Local development
 
