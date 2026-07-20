@@ -32,7 +32,7 @@ export async function POST({ request }) {
 
   const db = openDatabase();
   try {
-    const result = db.prepare('INSERT INTO accounts (name, opening_balance_minor) VALUES (?, ?)').run(body.name.trim(), balance.minor);
+    const result = db.prepare('INSERT INTO accounts (name, opening_balance_minor) VALUES (?, ?)').run(body.name.trim(), balance.minor ?? 0);
     const row = db.prepare('SELECT id, name, opening_balance_minor, created_at FROM accounts WHERE id = ?').get(result.lastInsertRowid);
     return json(accountFromRow(row), { status: 201 });
   } finally {
