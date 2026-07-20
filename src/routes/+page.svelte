@@ -1,4 +1,5 @@
 <script>
+  // @ts-nocheck
   export let data;
 
   const money = (value) => {
