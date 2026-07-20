@@ -3,12 +3,19 @@ import { dirname, join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
 const defaultPath = 'data/personal-finance.sqlite';
-const databasePath = process.env.DATABASE_PATH || defaultPath;
+export const databasePath = process.env.DATABASE_PATH || defaultPath;
 
 /** Initialize the local database and apply unapplied SQL migrations. */
 export function initializeDatabase() {
+  const db = openDatabase();
+  db.close();
+}
+
+/** Open an initialized database for a request. Callers must close the returned handle. */
+export function openDatabase() {
   mkdirSync(dirname(databasePath), { recursive: true });
   const db = new DatabaseSync(databasePath);
+  db.exec('PRAGMA foreign_keys = ON');
   db.exec('CREATE TABLE IF NOT EXISTS schema_migrations (version TEXT PRIMARY KEY, applied_at TEXT NOT NULL)');
 
   const migrationsDir = join(process.cwd(), 'migrations');
@@ -18,5 +25,5 @@ export function initializeDatabase() {
     db.exec(readFileSync(join(migrationsDir, file), 'utf8'));
     db.prepare('INSERT INTO schema_migrations (version, applied_at) VALUES (?, datetime(\'now\'))').run(file);
   }
-  db.close();
+  return db;
 }
